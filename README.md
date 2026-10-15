@@ -392,6 +392,44 @@ aade-provider/
 └── README.md
 ```
 
+## Docker
+
+### Quick Start
+
+```bash
+# Build and start
+docker-compose up -d
+
+# View logs
+docker-compose logs -f aade-provider
+
+# Stop
+docker-compose down
+```
+
+### Environment Variables
+
+Copy `.env.docker` to `.env` and fill in your AADE credentials:
+
+```bash
+cp .env.docker .env
+# Edit .env with real values
+```
+
+### Volumes
+
+| Mount | Purpose |
+|-------|---------|
+| `db_data` | Persistent SQLite database (survives container restart) |
+| `./logs` | Application logs (optional) |
+
+### Image Details
+
+- Multi-stage build keeps final image minimal (~180 MB)
+- Base: `node:20-alpine`
+- Port: `8000`
+- Health check: `/healthz` every 30s
+
 ---
 
 ## License
