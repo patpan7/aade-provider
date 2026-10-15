@@ -1,0 +1,286 @@
+<div x-data="issuePage()" x-init="init()">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-lg font-bold">Εκδοση Παραστατικου</h3>
+      <p class="text-xs text-gray-500">myDATA XSD v2.0.2</p>
+    </div>
+    <div class="flex gap-2">
+      <button @click="loadPreset('1.1')" class="text-xs bg-gray-700 hover:bg-blue-600 px-3 py-1.5 rounded transition">1.1 Pwlhsis (B2B)</button>
+      <button @click="loadPreset('2.1')" class="text-xs bg-gray-700 hover:bg-blue-600 px-3 py-1.5 rounded transition">2.1 Yphresiwv</button>
+      <button @click="loadPreset('11.1')" class="text-xs bg-gray-700 hover:bg-blue-600 px-3 py-1.5 rounded transition">11.1 Liavik Apdeixis</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="space-y-4">
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Tupos & Serifa</h4>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Tupos</label>
+            <select x-model="invoice.invoiceType" @change="onTypeChange" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+              <template x-for="t in invoiceTypes" :key="t.value">
+                <option :value="t.value" x-text="t.label"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1"> Serifa</label>
+            <input x-model="invoice.series" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">AA</label>
+            <input type="number" x-model.number="invoice.aa" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Hmeromnìa</label>
+            <input type="date" x-model="invoice.issueDate" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Wra</label>
+            <input type="time" x-model="invoice.issueTime" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Noma</label>
+            <select x-model="invoice.currency" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
+          Ektits (Emeis)
+          <span x-show="tenantData" class="text-[10px] text-green-400 font-normal" x-text="'apo ' + tenantData?.company_name + ' (AFM: ' + tenantData?.vat_number + ')'""></span>
+        </h4>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">AFM / VAT *</label>
+            <input x-model="invoice.issuer.vatNumber" :class="{ 'border-red-500': invoice.issuer.vatNumber && !issuerVatValid }" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+            <p x-show="invoice.issuer.vatNumber && !issuerVatValid" class="text-[10px] text-red-400 mt-0.5">Mi gymo AFM</p>
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Xwra</label>
+            <input x-model="invoice.issuer.country" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] text-gray-500 mb-1">Onomasia (Epwnymia) <span class="text-gray-600">— mono gia ektypwsh</span></label>
+            <input x-model="invoice.issuer.name" placeholder="p.x. ETAIREIA A.E." class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+            <p class="text-[10px] text-gray-600 mt-0.5" x-show="invoice.issuer?.country === 'GR'">! Den apostelletai stin AADE — apothikeftai topika</p>
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] text-gray-500 mb-1">Diefthynsh</label>
+            <input x-model="invoice.issuer.address" placeholder="Odós, Arithmós" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">T.K.</label>
+            <input x-model="invoice.issuer.postalCode" placeholder="T.K." class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Poli</label>
+            <input x-model="invoice.issuer.city" placeholder="Poli" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">
+          Liptis
+          <label class="ml-2 text-[10px] font-normal">
+            <input type="checkbox" x-model="includeCounterpart" class="mr-1"> Emfanish
+          </label>
+        </h4>
+        <div x-show="includeCounterpart" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">AFM / VAT</label>
+            <input x-model="invoice.counterpart.vatNumber" :class="{ 'border-red-500': invoice.counterpart.vatNumber && !counterpartVatValid }" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+            <p x-show="invoice.counterpart.vatNumber && !counterpartVatValid" class="text-[10px] text-red-400 mt-0.5">Mi gymo AFM</p>
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Xwra</label>
+            <input x-model="invoice.counterpart.country" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] text-gray-500 mb-1">Onomasia <span class="text-gray-600">— mono gia ektypwsh</span></label>
+            <input x-model="invoice.counterpart.name" placeholder="p.x. ETAIREIA A.E." class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] text-gray-500 mb-1">Diefthynsh</label>
+            <input x-model="invoice.counterpart.address" placeholder="Odós, Arithmós" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">T.K.</label>
+            <input x-model="invoice.counterpart.postalCode" placeholder="T.K." class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Poli</label>
+            <input x-model="invoice.counterpart.city" placeholder="Poli" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+          </div>
+        </div>
+        <p x-show="!includeCounterpart" class="text-[11px] text-gray-500 italic">Artaïtetai gia týpous B2B / B2G</p>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-bold text-gray-400 uppercase">Grammes</h4>
+          <button @click="addLine" class="text-xs bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded">+ Gramm</button>
+        </div>
+        <div class="space-y-2">
+          <template x-for="(line, idx) in invoice.lineItems" :key="idx">
+            <div class="bg-gray-900/50 rounded p-2.5 border border-gray-700">
+              <div class="flex items-start gap-2">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                  <div class="col-span-2">
+                    <label class="block text-[10px] text-gray-500">Perigrafi</label>
+                    <input x-model="line.description" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-500">Katharē Axia (€)</label>
+                    <input type="number" step="0.01" x-model.number="line.netValue" @input="recalcLine(idx)" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-500">FP</label>
+                    <select x-model="line.vatCategory" @change="recalcLine(idx)" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                      <option value="1">24%</option>
+                      <option value="2">13%</option>
+                      <option value="3">6%</option>
+                      <option value="4">17%</option>
+                      <option value="7">0% (Apallotrioto)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-500">Monada</label>
+                    <select x-model.number="line.measurementUnit" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                      <option :value="1">Temaxia</option>
+                      <option :value="2">Kila</option>
+                      <option :value="4">Metrita</option>
+                      <option :value="30">Ypiresies</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-500">Posothta</label>
+                    <input type="number" step="0.01" x-model.number="line.quantity" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                  </div>
+                </div>
+                <button @click="invoice.lineItems.splice(idx, 1)" class="text-gray-500 hover:text-red-400 text-xs">✕</button>
+              </div>
+              <div class="mt-2 pt-2 border-t border-gray-700">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] text-gray-500">E3 Taxinomhseis</span>
+                  <button @click="addClassification(idx)" class="text-[10px] text-blue-400 hover:text-blue-300">+ Prosfθ</button>
+                </div>
+                <template x-for="(cls, cIdx) in line.incomeClassifications" :key="cIdx">
+                  <div class="flex gap-2 items-center">
+                    <select x-model="cls.type" class="bg-gray-700 border border-gray-600 rounded px-1 py-0.5 text-[10px] w-32">
+                      <option value="E3_561_001">E3_561_001</option>
+                      <option value="E3_562_001">E3_562_001</option>
+                      <option value="E3_563_001">E3_563_001</option>
+                    </select>
+                    <input x-model.number="cls.amount" type="number" step="0.01" class="bg-gray-700 border border-gray-600 rounded px-1 py-0.5 text-[10px] w-20">
+                    <button @click="line.incomeClassifications.splice(cIdx, 1)" class="text-gray-500 hover:text-red-400 text-[10px]">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Trapezikoi Topoi Plyromis</h4>
+        <div class="space-y-2">
+          <template x-for="(pm, idx) in invoice.paymentMethods" :key="idx">
+            <div class="flex gap-2 items-center">
+              <select x-model="pm.type" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+                <option value="1">Trapezik Katathes</option>
+                <option value="2">Metrita</option>
+                <option value="3">Pistwtik Kart</option>
+                <option value="4">Entalma</option>
+              </select>
+              <input x-model="pm.info" placeholder="Plhrophories" class="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+              <input x-model.number="pm.amount" type="number" step="0.01" class="w-24 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs">
+              <button @click="invoice.paymentMethods.splice(idx, 1)" class="text-gray-500 hover:text-red-400">✕</button>
+            </div>
+          </template>
+          <button @click="invoice.paymentMethods.push({type: '1', amount: 0, info: ''})" class="text-xs text-blue-400 hover:text-blue-300">+ Prosfθ Topou</button>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Ypologismoi</h4>
+        <div class="grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <span class="text-gray-500">Kath.Axia:</span>
+            <span class="font-mono ml-2" x-text="'€' + formatNumber(totals.totalNet)"></span>
+          </div>
+          <div>
+            <span class="text-gray-500">FP:</span>
+            <span class="font-mono ml-2" x-text="'€' + formatNumber(totals.totalVat)"></span>
+          </div>
+          <div>
+            <span class="text-gray-500">Synolo:</span>
+            <span class="font-mono ml-2 font-bold text-blue-400" x-text="'€' + formatNumber(totals.totalGross)"></span>
+          </div>
+        </div>
+        <div class="mt-2 text-[10px] text-gray-500" x-show="totals.vatCategoryTotals.length">
+          <template x-for="vat in totals.vatCategoryTotals" :key="vat.rate">
+            <div class="flex justify-between">
+              <span x-text="vat.rate + '% FP:'"></span>
+              <span x-text="'€' + formatNumber(vat.totalNet)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button @click="issue()" :disabled="issuing" class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white text-sm py-2 rounded transition">
+          <span x-show="!issuing">Ekdoth Parastatikό</span>
+          <span x-show="issuing">Ekdose se poria...</span>
+        </button>
+      </div>
+
+      <div x-show="result" class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div x-show="result.success" class="text-green-400 text-sm">
+          <p>✓ Ekdoth kanonika!</p>
+          <p class="text-xs text-gray-500 mt-1">Mark: <span x-text="result.mark"></span> | UID: <span x-text="result.invoiceUid"></span></p>
+          <a :href="result.qrUrl" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">QR Code ↗</a>
+        </div>
+        <div x-show="!result.success" class="text-red-400 text-sm">
+          <p>✕ Sandexi me AADE:</p>
+          <ul class="text-xs mt-1" x-show="result.errors">
+            <template x-for="err in result.errors" :key="err">
+              <li x-text="err"></li>
+            </template>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Proeisphefh</h4>
+        <div class="text-xs space-y-2">
+          <div><span class="text-gray-500">Serial/AA:</span> <span x-text="invoice.series + '/' + invoice.aa"></span></div>
+          <div><span class="text-gray-500">Hmeromnìa:</span> <span x-text="invoice.issueDate"></span></div>
+          <div><span class="text-gray-500">Emítīs:</span> <span x-text="invoice.issuer.vatNumber"></span></div>
+          <div><span class="text-gray-500">Lhpths:</span> <span x-text="invoice.counterpart?.vatNumber || '—'"></span></div>
+          <div><span class="text-gray-500">Eίδος:</span> <span x-text="invoice.invoiceType"></span></div>
+          <div><span class="text-gray-500">Nomisma:</span> <span x-text="invoice.currency"></span></div>
+          <div class="pt-2 border-t border-gray-700">
+            <div class="flex justify-between"><span>Katharē:</span> <span x-text="'€' + formatNumber(totals.totalNet)"></span></div>
+            <div class="flex justify-between"><span>FP:</span> <span x-text="'€' + formatNumber(totals.totalVat)"></span></div>
+            <div class="flex justify-between font-bold"><span>Synolo:</span> <span class="text-blue-400" x-text="'€' + formatNumber(totals.totalGross)"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Hash</h4>
+        <div class="text-[10px] font-mono break-all text-gray-400" x-text="computedHash || '—'"></div>
+      </div>
+    </div>
+  </div>
+</div>

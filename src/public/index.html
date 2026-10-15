@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AADE myDATA Provider (ΥΠΑΗΕΣ)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen" x-data="dashboard()" x-cloak>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div x-show="showLogin" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900">
+    <div class="bg-gray-800 rounded-xl p-8 w-full max-w-sm border border-gray-700 shadow-2xl">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-blue-400">AADE myDATA Provider</h1>
+        <p class="text-xs text-gray-500 mt-1">ΥΠΑΗΕΣ Web Dashboard</p>
+      </div>
+      <form @submit.prevent="login()" class="space-y-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Email</label>
+          <input type="email" x-model="loginForm.email" required class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Password</label>
+          <input type="password" x-model="loginForm.password" required class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <p x-show="loginError" class="text-red-400 text-xs" x-text="loginError"></p>
+        <button type="submit" :disabled="loginLoading" class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white py-2 rounded text-sm font-medium transition">
+          <span x-text="loginLoading ? 'Σύνδεση...' : 'Σύνδεση'"></span>
+        </button>
+      </form>
+      <p class="text-[10px] text-gray-600 text-center mt-4">SUPER_ADMIN: admin@aade.local / superadmin</p>
+    </div>
+  </div>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div x-show="!showLogin" class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-56 bg-gray-800 border-r border-gray-700 flex-shrink-0 flex flex-col">
+      <div class="p-4 border-b border-gray-700">
+        <h1 class="text-sm font-bold text-blue-400">AADE myDATA</h1>
+        <p class="text-[10px] text-gray-500 mt-0.5">Provider Sandbox</p>
+      </div>
+
+<nav class="flex-1 overflow-y-auto py-2">
+        <template x-for="item in menuItems" :key="item.path">
+          <a href="#" @click.prevent="navigate(item.path)"
+             :data-path="item.path"
+             :data-required-role="item.roles"
+             x-show="!item.roles || item.roles.length === 0 || item.roles.includes(currentUser?.role)"
+             class="nav-link flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-700/50 transition border-l-2 border-transparent"
+             :class="{ 'bg-blue-700/40 border-l-2 border-blue-400 text-gray-200': currentPage === item.path }">
+             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x-text="item.icon"></path>
+             </svg>
+             <span x-text="item.label"></span>
+          </a>
+        </template>
+      </nav>
+
+      <div class="p-4 border-t border-gray-700 text-[10px] text-gray-600">
+        <div x-text="'Role: ' + (currentUser?.role || '—')"></div>
+        <div x-text="'Tenant: ' + (currentUser?.tenant_id || '—')"></div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- TOP BAR -->
+      <header class="bg-gray-800/80 border-b border-gray-700 px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur">
+        <h2 class="text-sm font-semibold text-gray-200" x-text="pageTitle"></h2>
+        <div class="flex items-center gap-4">
+          <span x-show="serverConfig" :class="serverConfig?.isValid ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'" class="text-xs px-2 py-0.5 rounded border border-gray-600">
+            <span x-text="serverConfig?.isValid ? 'Credentials OK' : 'No Credentials'"></span>
+          </span>
+          <span x-show="serverConfig" :class="serverConfig?.isMock ? 'bg-amber-900/50 text-amber-300' : 'bg-green-900/50 text-green-300'" class="text-xs px-2 py-0.5 rounded border border-gray-600">
+            <span x-text="serverConfig?.isMock ? 'Mock Mode' : 'Sandbox'"></span>
+          </span>
+          <div x-show="currentUser" class="flex items-center gap-2 ml-2 border-l border-gray-700 pl-3">
+            <span class="text-xs text-gray-400" x-text="currentUser?.name || currentUser?.email"></span>
+            <span :class="{
+              'SUPER_ADMIN':'bg-purple-900/50 text-purple-300',
+              'RESELLER_ADMIN':'bg-blue-900/50 text-blue-300',
+              'CLIENT_ADMIN':'bg-green-900/50 text-green-300',
+              'USER':'bg-gray-700 text-gray-300'
+            }[currentUser?.role || '']" class="px-1.5 py-0.5 rounded text-[10px] font-medium" x-text="currentUser?.role || 'USER'"></span>
+            <button @click="logout()" class="text-xs text-red-400 hover:text-red-300">Logout</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main id="page-content" class="flex-1 p-6 overflow-y-auto">
+        <div class="flex items-center justify-center h-64">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- API client (must load first) -->
+  <script type="module" src="/js/api.js"></script>
+  <!-- Page components -->
+  <script type="module" src="/js/pages.js"></script>
+  <!-- Routes (loads pages on demand) -->
+  <script src="/js/routes.js"></script>
+  <!-- Alpine dashboard (shared state) -->
+  <script>
+    function dashboard() {
+      return {
+        showLogin: true,
+        currentUser: null,
+        serverConfig: null,
+        currentPage: '/',
+        pageTitle: 'Dashboard',
+        loginForm: { email: '', password: '' },
+        loginError: '',
+        loginLoading: false,
+        menuItems: [
+          { path: '/',         label: 'Dashboard',   roles: [], icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+          { path: '/invoices', label: 'Invoices',    roles: [], icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+          { path: '/issue',    label: 'Issue Invoice',roles: [], icon: 'M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-3m-4 0H7m4 0v12m0 0l4-4m-4 4l-4-4' },
+          { path: '/tenants',  label: 'Tenants',     roles: ['SUPER_ADMIN','RESELLER_ADMIN'], icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+          { path: '/users',    label: 'Users',       roles: ['SUPER_ADMIN','RESELLER_ADMIN','CLIENT_ADMIN'], icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+          { path: '/api-keys', label: 'API Keys',    roles: ['SUPER_ADMIN','RESELLER_ADMIN','CLIENT_ADMIN'], icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
+          { path: '/credits',  label: 'Credits',     roles: ['SUPER_ADMIN','RESELLER_ADMIN','CLIENT_ADMIN'], icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+          { path: '/webhooks', label: 'Webhooks',    roles: ['SUPER_ADMIN','RESELLER_ADMIN','CLIENT_ADMIN'], icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
+          { path: '/resellers',label: 'Resellers',   roles: ['SUPER_ADMIN'], icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+          { path: '/audit',    label: 'Audit Log',   roles: ['SUPER_ADMIN'], icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+          { path: '/settings', label: 'Settings',    roles: ['SUPER_ADMIN'], icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+        ],
+
+        get isAdmin() { return this.currentUser && ['SUPER_ADMIN','RESELLER_ADMIN'].includes(this.currentUser.role); },
+        get isSuperAdmin() { return this.currentUser?.role === 'SUPER_ADMIN'; },
+        get myTenantId() { return this.currentUser?.tenant_id || null; },
+        titles: { '/':'Dashboard','/invoices':'Invoices','/issue':'Issue Invoice','/tenants':'Tenants','/users':'Users','/api-keys':'API Keys','/credits':'Credits','/webhooks':'Webhooks','/resellers':'Resellers','/audit':'Audit Log','/settings':'Settings' },
+        accessiblePath(path) {
+          const item = this.menuItems.find(m => m.path === path);
+          if (!item) return '/';
+          if (item.roles && item.roles.length && !item.roles.includes(this.currentUser?.role)) return '/';
+          return path;
+        },
+
+        async init() {
+          window.__dashboard = this;
+          window.addEventListener('session-expired', () => {
+            this.currentUser = null;
+            this.showLogin = true;
+            this.loginForm = { email: '', password: '' };
+            this.loginError = 'Η συνεδρία έληξε. Συνδεθείτε ξανά.';
+          });
+          await this.fetchServerConfig();
+          const saved = localStorage.getItem('ypah_session');
+          if (saved) {
+            try {
+              const me = await api.getMe();
+              if (me && me.success && me.user) {
+                this.currentUser = { ...me.user, token: JSON.parse(saved).token };
+                this.showLogin = false;
+                this.currentPage = this.accessiblePath(location.pathname || '/');
+                this.pageTitle = this.titles[this.currentPage] || this.currentPage.replace(/^\//,'').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+                // Force route reload to ensure correct page
+                if (window.navigate) window.navigate(this.currentPage);
+                return;
+              }
+            } catch(e) { console.warn('[init] stale session:', e.message); localStorage.removeItem('ypah_session'); }
+          }
+          this.showLogin = true;
+        },
+
+        async fetchServerConfig() {
+          try { const r = await api.fetchConfig(); this.serverConfig = r; } catch(_) {}
+        },
+
+        async login() {
+          this.loginError = '';
+          this.loginLoading = true;
+          try {
+            const res = await api.loginUser({ email: this.loginForm.email, password: this.loginForm.password });
+            if (res.success) {
+              this.currentUser = { ...res.user, token: res.token, name: `${res.user.first_name||''} ${res.user.last_name||''}`.trim() };
+              localStorage.setItem('ypah_session', JSON.stringify(this.currentUser));
+              this.showLogin = false;
+              this.currentPage = '/';
+              this.pageTitle = 'Dashboard';
+              // Trigger route load
+              if (window.navigate) window.navigate('/');
+            } else { this.loginError = res.errors?.join('; ') || 'Login failed'; }
+          } catch(e) { this.loginError = e.message || 'Login failed'; }
+          finally { this.loginLoading = false; }
+        },
+
+        async logout() {
+          try { await fetch('/api/users/logout', { method: 'POST' }); } catch(_) {}
+          this.currentUser = null;
+          this.showLogin = true;
+          this.loginForm = { email: '', password: '' };
+          this.loginError = '';
+          localStorage.removeItem('ypah_session');
+        },
+
+        navigate(path) {
+          const target = this.accessiblePath(path);
+          this.currentPage = target;
+          this.pageTitle = this.titles[target] || target;
+          if (window.navigate) window.navigate(target);
+        }
+      };
+    }
+    window.dashboard = dashboard;
+  </script>
+</body>
+</html>

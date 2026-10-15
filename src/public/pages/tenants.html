@@ -1,0 +1,143 @@
+<div x-data="tenantsPage()" x-init="init()" class="space-y-4">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <p class="text-xs text-gray-500" x-text="tenants.length + ' tenants'"></p>
+    <button @click="showModal = true" class="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded">+ Νέο Tenant</button>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-700">
+          <th class="text-left px-4 py-2">Company</th>
+          <th class="text-left px-4 py-2">Trade Title</th>
+          <th class="text-left px-4 py-2">ΑΦМ</th>
+          <th class="text-left px-4 py-2">Tax Office</th>
+          <th class="text-left px-4 py-2">City / Phone</th>
+          <th class="text-center px-4 py-2">Status</th>
+          <th class="text-center px-4 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="t in tenants" :key="t.id">
+          <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+            <td class="px-4 py-2 font-medium" x-text="t.company_name"></td>
+            <td class="px-4 py-2 text-gray-400" x-text="t.trade_title || '—'"></td>
+            <td class="px-4 py-2 font-mono" x-text="t.vat_number"></td>
+            <td class="px-4 py-2 text-xs" x-text="t.tax_office || '—'"></td>
+            <td class="px-4 py-2 text-xs">
+              <span x-text="t.city || ''"></span>
+              <span x-show="t.city && t.phone" class="text-gray-600"> · </span>
+              <span x-text="t.phone || ''"></span>
+            </td>
+            <td class="px-4 py-2 text-center">
+              <span :class="statusClass(t.status)" class="px-2 py-0.5 rounded text-[10px] font-medium" x-text="t.status"></span>
+            </td>
+            <td class="px-4 py-2 text-center space-x-2">
+              <button @click="edit(t)" class="text-blue-400 hover:text-blue-300">Επεξεργασία</button>
+              <template x-if="t.status === 'PENDING'">
+                <span class="inline-flex gap-2">
+                  <button @click="approve(t.id)" class="text-green-400 hover:text-green-300">✓ Εγκρίνισε</button>
+                  <button @click="reject(t.id)" class="text-red-400 hover:text-red-300">✕ Απόρριψη</button>
+                </span>
+              </template>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="tenants.length === 0">
+          <td colspan="7" class="px-4 py-6 text-center text-gray-500">Κανένα tenant</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Create modal -->
+  <div x-show="showModal" @click="showModal = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" x-cloak>
+    <div @click.stop class="bg-gray-800 rounded-xl border border-gray-700 p-5 max-w-lg w-full">
+      <h4 class="font-bold text-sm mb-4" x-text="editingId ? 'Επεξεργασία Tenant' : 'Νέο Tenant (PENDING → approval)'"></h4>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Company *</label>
+            <input x-model="form.company_name" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Trade Title</label>
+            <input x-model="form.trade_title" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">ΑΦΜ / VAT *</label>
+            <input x-model="form.vat_number" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Email *</label>
+            <input x-model="form.email" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Tax Office (ΔΟΥ)</label>
+          <input x-model="form.tax_office" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Διεύθυνση (Οδός)</label>
+            <input x-model="form.address" placeholder="π.χ. Λεωφ. Κηφισίας" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Αριθμός</label>
+            <input x-model="form.number" placeholder="π.χ. 123" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">ΤΚ</label>
+            <input x-model="form.postal_code" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Πόλη</label>
+            <input x-model="form.city" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">City</label>
+            <input x-model="form.city" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Phone</label>
+            <input x-model="form.phone" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Country</label>
+          <select x-model="form.country" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+            <option value="GR">GR — Ελλάδα</option>
+            <option value="CY">CY — Κύπρος</option>
+            <option value="DE">DE — Germany</option>
+            <option value="IT">IT — Italy</option>
+            <option value="FR">FR — France</option>
+            <option value="GB">GB — United Kingdom</option>
+            <option value="US">US — USA</option>
+          </select>
+        </div>
+        <div x-show="resellers.length">
+          <label class="block text-[11px] text-gray-500 mb-1">Reseller (προαιρετικό)</label>
+          <select x-model="form.reseller_id" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+            <option value="">— Χωρίς reseller —</option>
+            <template x-for="r in resellers" :key="r.id">
+              <option :value="r.id" x-text="r.name"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="showModal = false" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded">Ακύρωση</button>
+        <button @click="create()" :disabled="busy" class="text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 px-3 py-1.5 rounded" x-text="busy ? 'Αποθήκευση...' : 'Δημιουργία'"></button>
+      </div>
+    </div>
+  </div>
+</div>

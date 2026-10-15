@@ -1,0 +1,93 @@
+<div x-data="invoicesPage()" x-init="init()" class="space-y-4">
+
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-3 items-center">
+    <input x-model="filter" placeholder="Αναζήτηση (ΑΦΜ, MARK, UUID)..." class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm w-64">
+    <select x-model="status" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+      <option value="">Όλα τα status</option>
+      <option value="SENT">SENT</option>
+      <option value="FAILED">FAILED</option>
+      <option value="DRAFT">DRAFT</option>
+    </select>
+    <span class="text-xs text-gray-500" x-text="filtered.length + ' αποτελέσματα'"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-700">
+<th class="text-left px-4 py-2">Ημ.</th>
+            <th class="text-left px-4 py-2">Σειρά/ΑΑ</th>
+            <th class="text-left px-4 py-2">Τύπος</th>
+            <th class="text-left px-4 py-2">Εκδότης</th>
+            <th class="text-left px-4 py-2">Λήπτης</th>
+            <th class="text-center px-4 py-2">Status</th>
+            <th class="text-center px-4 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="inv in filtered" :key="inv.id">
+          <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+            <td class="px-4 py-2 whitespace-nowrap" x-text="(inv.created_at||'').substring(0,10)"></td>
+            <td class="px-4 py-2 font-mono" x-text="(inv.series||'') + '/' + inv.aa"></td>
+            <td class="px-4 py-2" x-text="inv.invoice_type"></td>
+            <td class="px-4 py-2 font-mono" x-text="inv.issuer_vat"></td>
+            <td class="px-4 py-2 font-mono" x-text="inv.counterpart_vat || '—'"></td>
+            <td class="px-4 py-2 text-right whitespace-nowrap" x-text="'€' + formatNumber(inv.total_gross)"></td>
+            <td class="px-4 py-2 text-center">
+              <span :class="{
+                'SENT': 'bg-green-900/60 text-green-300',
+                'FAILED': 'bg-red-900/60 text-red-300',
+                'DRAFT': 'bg-amber-900/60 text-amber-300',
+              }[inv.status] || 'bg-gray-700 text-gray-300'" class="px-2 py-0.5 rounded text-[10px] font-medium" x-text="inv.status"></span>
+            </td>
+<td class="px-4 py-2 text-center">
+              <button @click="view(inv.id)" class="text-blue-400 hover:text-blue-300">Επιλογή</button>
+              <button @click="view(inv.id)" class="text-blue-400 hover:text-blue-300">επισκόπηση</button>
+              <button @click="printInvoice(inv.id)" class="text-red-400 hover:text-red-300">Εκτύπωση</button>
+            </td>
+            <td class="text-center px-4 py-2">
+              <span :class="{
+                'SENT': 'bg-green-900/60 text-green-300',
+                'FAILED': 'bg-red-900/60 text-red-300',
+                'DRAFT': 'bg-amber-900/60 text-amber-300',
+              }[inv.status] || 'bg-gray-700 text-gray-300'" class="px-2 py-0.5 rounded text-[10px] font-medium" x-text="inv.status"></span>
+          </tr>
+        </template>
+        <tr x-show="filtered.length === 0">
+          <td colspan="8" class="px-4 py-6 text-center text-gray-500">Κανένα παραστατικό</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Detail modal -->
+  <div x-show="selected" @click="selected = null" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" x-cloak>
+    <div @click.stop class="bg-gray-800 rounded-xl border border-gray-700 p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="font-bold text-sm">Παραστατικό #<span x-text="selected?.id"></span></h4>
+        <button @click="selected = null" class="text-gray-500 hover:text-gray-300">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div><span class="text-gray-500">MARK:</span> <span class="font-mono" x-text="selected?.mark || '—'"></span></div>
+        <div><span class="text-gray-500">UID:</span> <span class="font-mono" x-text="selected?.invoice_uid || '—'"></span></div>
+        <div><span class="text-gray-500">UUID:</span> <span class="font-mono text-[10px] break-all" x-text="selected?.uuid"></span></div>
+        <div><span class="text-gray-500">Ημ/νία:</span> <span x-text="selected?.issue_date"></span></div>
+        <div><span class="text-gray-500">Έσοδα:</span> <span x-text="'€' + formatNumber(selected?.total_net)"></span></div>
+        <div><span class="text-gray-500">ΦΠΑ:</span> <span x-text="'€' + formatNumber(selected?.total_vat)"></span></div>
+        <div class="col-span-2"><span class="text-gray-500">Σύνολο:</span> <span class="font-bold text-blue-400" x-text="'€' + formatNumber(selected?.total_gross)"></span></div>
+      </div>
+      <a x-show="selected && selected.qr_url" :href="selected.qr_url" target="_blank" class="inline-block mt-3 text-blue-400 hover:text-blue-300 text-xs">QR Code ↗</a>
+      <div x-show="selected && selected.errors" class="mt-3 bg-red-950/60 border border-red-800 rounded p-2 text-xs text-red-300" x-text="selected.errors"></div>
+      <details class="mt-3" x-show="selected?.xml_request">
+        <summary class="text-[10px] text-gray-500 cursor-pointer">XML Request</summary>
+        <pre class="bg-gray-900 rounded p-2 mt-1 text-[10px] text-gray-400 overflow-auto max-h-60" x-text="selected?.xml_request"></pre>
+      </details>
+      <details class="mt-2" x-show="selected?.aade_raw_response">
+        <summary class="text-[10px] text-gray-500 cursor-pointer">AADE Raw Response</summary>
+        <pre class="bg-gray-900 rounded p-2 mt-1 text-[10px] text-gray-400 overflow-auto max-h-60" x-text="selected?.aade_raw_response"></pre>
+      </details>
+    </div>
+  </div>
+</div>

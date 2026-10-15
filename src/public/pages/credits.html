@@ -1,0 +1,66 @@
+<div x-data="creditsPage()" x-init="init()" class="space-y-4">
+
+  <!-- Tenant selector -->
+  <div class="flex items-center gap-3">
+    <label class="text-xs text-gray-500">Tenant:</label>
+    <select x-model="selectedTenantId" @change="load()" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+      <template x-for="t in tenants" :key="t.id">
+        <option :value="t.id" x-text="t.company_name"></option>
+      </template>
+    </select>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+    <!-- Tenant-level wallet -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+      <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">Tenant-Level Wallet</h4>
+      <p class="text-[11px] text-gray-500 mb-3">Φθίνεται όταν εκδίδεις από το web χωρίς επιλογή key.</p>
+      <div class="flex items-center gap-2">
+        <div class="flex-1">
+          <label class="block text-[11px] text-gray-500 mb-1">Προσθήκη credits</label>
+          <input type="number" x-model.number="addAmount" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+        </div>
+        <button @click="addTenantCredits()" class="mt-4 text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded">+ Add</button>
+      </div>
+      <p class="text-[11px] text-gray-500 mt-3">Σύνολο tenant credits:</p>
+      <p class="text-2xl font-bold text-blue-400" x-text="wallets.find(w => w.api_key_id === null)?.balance ?? 0"></p>
+    </div>
+
+    <!-- Per-key wallets -->
+    <div class="lg:col-span-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+      <div class="p-4 border-b border-gray-700">
+        <h4 class="text-xs font-bold text-gray-400 uppercase">Per-Key Wallets</h4>
+      </div>
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-gray-500 border-b border-gray-700">
+            <th class="text-left px-4 py-2">Key</th>
+            <th class="text-center px-4 py-2">Balance</th>
+            <th class="text-left px-4 py-2">Expires</th>
+            <th class="text-center px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="w in wallets.filter(w => w.api_key_id !== null)" :key="w.id">
+            <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+              <td class="px-4 py-2 font-mono" x-text="'Key #' + w.api_key_id"></td>
+              <td class="px-4 py-2 text-center">
+                <span :class="(w.balance ?? 0) < 20 ? 'text-red-400 font-bold' : 'text-green-400'" x-text="w.balance ?? 0"></span>
+              </td>
+              <td class="px-4 py-2" x-text="w.expires_at || '—'"></td>
+              <td class="px-4 py-2 text-center">
+                <button @click="addKeyCredits(w.api_key_id)" class="text-[10px] text-blue-400 hover:text-blue-300">+ Add</button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="wallets.filter(w => w.api_key_id !== null).length === 0">
+            <td colspan="4" class="px-4 py-6 text-center text-gray-500">Κανένα per-key wallet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-[11px] text-gray-500">ℹ️ Το 1 credit = 1 παραστατικό. Τα per-key wallets χρεώνονται όταν εκδίδεται με συγκεκριμένο API key. Τα tenant-level όταν εκδίδεις από το web.</p>
+</div>

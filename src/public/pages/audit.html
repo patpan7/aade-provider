@@ -1,0 +1,54 @@
+<div x-data="auditPage()" x-init="init()" class="space-y-4">
+
+  <div class="flex items-center gap-3">
+    <select x-model="filterTenant" @change="load()" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+      <option value="">Όλα τα tenants</option>
+      <template x-for="n in 20" :key="n">
+        <option :value="n" x-show="n <= 20" x-text="'Tenant #' + n"></option>
+      </template>
+    </select>
+    <button @click="load()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded">↻ Reload</button>
+    <span class="text-xs text-gray-500 ml-auto" x-text="logs.length + ' events'"></span>
+  </div>
+
+  <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-700">
+          <th class="text-left px-4 py-2">Ημ/νία</th>
+          <th class="text-left px-4 py-2">Action</th>
+          <th class="text-left px-4 py-2">Entity</th>
+          <th class="text-center px-4 py-2">User</th>
+          <th class="text-center px-4 py-2">Tenant</th>
+          <th class="text-left px-4 py-2">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="log in logs" :key="log.id">
+          <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+            <td class="px-4 py-2 whitespace-nowrap" x-text="(log.created_at||'').replace('T',' ').substring(0,19)"></td>
+            <td class="px-4 py-2">
+              <span :class="{
+                'USER_LOGIN': 'text-green-400',
+                'USER_LOGOUT': 'text-amber-400',
+                'INVOICE_ISSUED': 'text-blue-400',
+                'TENANT_CREATED': 'text-purple-400',
+                'TENANT_APPROVED': 'text-green-400',
+                'TENANT_REJECTED': 'text-red-400',
+                'API_KEY_CREATED': 'text-amber-400',
+                'CREDITS_ADDED': 'text-green-400',
+              }[log.action] || 'text-gray-300'" class="font-medium" x-text="log.action"></span>
+            </td>
+            <td class="px-4 py-2" x-text="(log.entity_type||'') + (log.entity_id ? ' #' + log.entity_id : '')"></td>
+            <td class="px-4 py-2 text-center" x-text="log.user_id || '—'"></td>
+            <td class="px-4 py-2 text-center" x-text="log.tenant_id || '—'"></td>
+            <td class="px-4 py-2 text-gray-400 max-w-md truncate" x-text="log.details || ''" :title="log.details"></td>
+          </tr>
+        </template>
+        <tr x-show="logs.length === 0">
+          <td colspan="6" class="px-4 py-6 text-center text-gray-500">Κανένα audit event</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

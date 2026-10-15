@@ -1,0 +1,120 @@
+<div x-data="apiKeysPage()" x-init="init()" class="space-y-4">
+
+  <!-- Tenant selector -->
+  <div class="flex items-center gap-3">
+    <label class="text-xs text-gray-500">Tenant:</label>
+    <select x-model="selectedTenantId" @change="loadKeys()" class="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+      <template x-for="t in tenants" :key="t.id">
+        <option :value="t.id" x-text="t.company_name + ' (' + (t.vat_number||'') + ')'"></option>
+      </template>
+    </select>
+    <button @click="showNew = !showNew" class="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded ml-auto">+ Νέο API Key</button>
+  </div>
+
+  <!-- New key form -->
+  <div x-show="showNew" class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+      <div>
+        <label class="block text-[11px] text-gray-500 mb-1">Key Name *</label>
+        <input x-model="newName" placeholder="π.χ. Κέντρο" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-[11px] text-gray-500 mb-1">AADE Branch *</label>
+        <input type="number" x-model.number="newBranch" min="0" max="999" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-[11px] text-gray-500 mb-1">Default Series</label>
+        <input x-model="newSeries" placeholder="π.χ. T" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+      </div>
+      <div class="flex gap-2">
+        <select x-model="newEnv" class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          <option value="LIVE">LIVE</option>
+          <option value="SANDBOX">SANDBOX</option>
+        </select>
+        <button @click="createKey()" class="text-xs bg-green-600 hover:bg-green-500 px-4 py-2 rounded">Δημιουργία</button>
+      </div>
+    </div>
+    <p class="text-[10px] text-gray-600 mt-2">💡 Ίδιος πελάτης με 2 υποκαταστήματα → φτιάξε 2 keys με διαφορετικό aade_branch (π.χ. 0 και 1).</p>
+  </div>
+
+  <!-- Keys table -->
+  <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-700">
+          <th class="text-left px-4 py-2">ID</th>
+          <th class="text-left px-4 py-2">Name</th>
+          <th class="text-center px-4 py-2">Branch</th>
+          <th class="text-left px-4 py-2">Series</th>
+          <th class="text-left px-4 py-2">Prefix</th>
+          <th class="text-left px-4 py-2">Env</th>
+          <th class="text-center px-4 py-2">Credits</th>
+          <th class="text-center px-4 py-2">Status</th>
+          <th class="text-center px-4 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="k in keys" :key="k.id">
+          <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+            <td class="px-4 py-2 font-mono" x-text="'#' + k.id"></td>
+            <td class="px-4 py-2 font-medium" x-text="k.name"></td>
+            <td class="px-4 py-2 text-center font-mono" x-text="k.aade_branch"></td>
+            <td class="px-4 py-2 font-mono text-xs" x-text="k.default_series || '—'"></td>
+            <td class="px-4 py-2 font-mono text-xs" x-text="k.key_prefix"></td>
+            <td class="px-4 py-2">
+              <span :class="k.environment === 'SANDBOX' ? 'text-amber-400' : 'text-green-400'" x-text="k.environment"></span>
+            </td>
+            <td class="px-4 py-2 text-center">
+              <span :class="(k.credit_balance ?? 0) < 20 ? 'text-red-400 font-bold' : 'text-green-400'" x-text="k.credit_balance ?? 0"></span>
+              <button @click="addKeyCredits(k.id)" class="ml-2 text-[10px] text-blue-400 hover:text-blue-300">+ Add</button>
+            </td>
+            <td class="px-4 py-2 text-center">
+              <span :class="k.is_active ? 'text-green-400' : 'text-red-400'" x-text="k.is_active ? 'Active' : 'Inactive'"></span>
+            </td>
+            <td class="px-4 py-2 text-center">
+              <button @click="editKey(k)" class="text-blue-400 hover:text-blue-300 mr-2">Edit</button>
+              <button @click="deleteKey(k.id)" class="text-red-400 hover:text-red-300">Deactivate</button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="keys.length === 0">
+          <td colspan="9" class="px-4 py-6 text-center text-gray-500">Κανένα API key</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Edit key modal -->
+  <div x-show="showEdit" @click="showEdit = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" x-cloak>
+    <div @click.stop class="bg-gray-800 rounded-xl border border-gray-700 p-5 max-w-sm w-full">
+      <h4 class="font-bold text-sm mb-4">Επεξεργασία API Key #<span x-text="editForm?.id"></span></h4>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Name</label>
+          <input x-model="editForm.name" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">AADE Branch</label>
+          <input type="number" x-model.number="editForm.aade_branch" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Default Series</label>
+          <input x-model="editForm.default_series" placeholder="π.χ. T" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Environment</label>
+          <select x-model="editForm.environment" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+            <option value="LIVE">LIVE</option>
+            <option value="SANDBOX">SANDBOX</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="showEdit = false; editForm = null" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded">Ακύρωση</button>
+        <button @click="saveKey()" :disabled="editingKey" class="text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 px-3 py-1.5 rounded" x-text="editingKey ? 'Αποθήκευση...' : 'Αποθήκευση'"></button>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-[11px] text-gray-500">💡 Χρήση key: <code class="bg-gray-700 px-1 rounded">Authorization: Bearer pk_live_...</code> στο <code class="bg-gray-700 px-1 rounded">POST /api/invoices/issue</code></p>
+</div>

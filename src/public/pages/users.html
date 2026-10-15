@@ -1,0 +1,95 @@
+<div x-data="usersPage()" x-init="init()" class="space-y-4">
+
+  <div class="flex items-center justify-between">
+    <p class="text-xs text-gray-500" x-text="users.length + ' χρήστες'"></p>
+    <button @click="showModal = true" class="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded">+ Νέος Χρήστης</button>
+  </div>
+
+  <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-700">
+          <th class="text-left px-4 py-2">Email</th>
+          <th class="text-left px-4 py-2">Όνομα</th>
+          <th class="text-center px-4 py-2">Ρόλος</th>
+          <th class="text-center px-4 py-2">Tenant</th>
+          <th class="text-center px-4 py-2">Status</th>
+          <th class="text-center px-4 py-2">Last Login</th>
+          <th class="text-center px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="u in users" :key="u.id">
+          <tr class="border-b border-gray-700/50 hover:bg-gray-700/20">
+            <td class="px-4 py-2" x-text="u.email"></td>
+            <td class="px-4 py-2" x-text="(u.first_name||'') + ' ' + (u.last_name||'')"></td>
+            <td class="px-4 py-2 text-center">
+              <span :class="roleClass(u.role)" class="px-2 py-0.5 rounded text-[10px] font-medium" x-text="u.role"></span>
+            </td>
+            <td class="px-4 py-2 text-center" x-text="u.tenant_id || '—'"></td>
+            <td class="px-4 py-2 text-center">
+              <span :class="u.is_active ? 'text-green-400' : 'text-red-400'" x-text="u.is_active ? 'Active' : 'Inactive'"></span>
+            </td>
+            <td class="px-4 py-2 text-center" x-text="u.last_login_at ? u.last_login_at.substring(0,16).replace('T',' ') : '—'"></td>
+            <td class="px-4 py-2 text-center">
+              <button @click="edit(u)" class="text-blue-400 hover:text-blue-300 mr-2">Επεξεργασία</button>
+              <button x-show="u.is_active" @click="deactivate(u.id)" class="text-red-400 hover:text-red-300">Απενεργοποίηση</button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="users.length === 0">
+          <td colspan="7" class="px-4 py-6 text-center text-gray-500">Κανένας χρήστης</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Create user modal -->
+  <div x-show="showModal" @click="showModal = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" x-cloak>
+    <div @click.stop class="bg-gray-800 rounded-xl border border-gray-700 p-5 max-w-md w-full">
+      <h4 class="font-bold text-sm mb-4" x-text="editingId ? 'Επεξεργασία Χρήστη' : 'Νέος Χρήστης'"></h4>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Email *</label>
+          <input x-model="form.email" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Password <span x-show="!editingId">*</span></label>
+          <input x-show="!editingId" type="password" x-model="form.password" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Όνομα</label>
+            <input x-model="form.first_name" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-[11px] text-gray-500 mb-1">Επώνυμο</label>
+            <input x-model="form.last_name" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] text-gray-500 mb-1">Ρόλος</label>
+          <select x-model="form.role" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+            <option x-show="window.__dashboard?.isSuperAdmin" value="SUPER_ADMIN">SUPER_ADMIN</option>
+            <option value="USER">USER</option>
+            <option value="CLIENT_ADMIN">CLIENT_ADMIN</option>
+            <option value="RESELLER_ADMIN">RESELLER_ADMIN</option>
+          </select>
+        </div>
+        <div x-show="tenants.length">
+          <label class="block text-[11px] text-gray-500 mb-1">Tenant</label>
+          <select x-model="form.tenant_id" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+            <option value="">— Χωρίς tenant (admin) —</option>
+            <template x-for="t in tenants" :key="t.id">
+              <option :value="t.id" x-text="t.company_name + ' (' + t.vat_number + ')'"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="showModal = false" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded">Ακύρωση</button>
+        <button @click="create()" class="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded" x-text="editingId ? 'Αποθήκευση' : 'Δημιουργία'"></button>
+      </div>
+    </div>
+  </div>
+</div>
